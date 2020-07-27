@@ -69,48 +69,45 @@
 
         vm.getResourceSets = function getResourceSets() {
             return localizationService.getResourceSets()
-                .success(function(resourceSets) {
-                    vm.resourceSets = resourceSets;
-                    if (!vm.resourceSet && resourceSets && resourceSets.length > 0) {
+                .then(function (resourceSets) {
+                    vm.resourceSets = getHttpData(resourceSets);
+                    if (!vm.resourceSet && vm.resourceSets && vm.resourceSets.length > 0) {
                         vm.resourceSet = vm.resourceSets[0];
                         vm.isLocalizationTable = true;
                     } else {
                         localizationService.isLocalizationTable()
-                            .success(function(exists) {
-                                vm.isLocalizationTable = exists;
-                            })
-                            .error(parseError);
+                            .then(function (exists) {
+                                vm.isLocalizationTable = getHttpData(exists);
+                            }, parseError);
                     }
 
                     vm.onResourceSetChange();
                 })
-                .error(parseError);
+                .catch(parseError);
         };
 
 
         vm.updateResource = function (resource) {
 
             return localizationService.updateResource(resource)
-                .success(function () {
+                .then(function () {
                      // reset the items and rebind
                      vm.getResourceItems();
                      showMessage(vm.dbRes('ResourceSaved') + " [" +
                          resource.ResourceId +
                          " (" + (resource.LocaleId ? resource.LocaleId : "invariant") + ")]");
                 })
-                .error(parseError);
+                .catch(parseError);
         };
 
         vm.updateResourceString = function (value, localeId) {
-            console.log(vm);
             return localizationService.updateResourceString(value, vm.resourceId, vm.resourceSet, localeId, vm.activeResource.Comment)
-                .success(function () {
+                .then(function () {
                     // reset the items and rebind                     
                     showMessage(vm.dbRes('ResourceSaved') +
                         " [" + vm.resourceId +
                         " (" + (localeId ? localeId : "invariant") + ")]");
-                })
-                .error(parseError);
+                }, parseError);
         };
 
 
@@ -123,21 +120,21 @@
                 return;
             }
             return localizationService.getResourceList(vm.resourceSet)
-                .success(function(resourceList) {
-                    vm.resourceList = resourceList;
-                    if (resourceList.length > 0) {
+                .then(function (resourceList) {
+                    vm.resourceList = getHttpData(resourceList);
+                    if (vm.resourceList.length > 0) {
                         vm.resourceId = vm.resourceList[0].ResourceId;
                         setTimeout(function() { vm.onResourceIdChange(); }, 10);
                     }
                 })
-                .error(parseError);
+                .catch(parseError);
         };
 
         vm.getResourceItems = function getResourceItems() {            
             localizationService.getResourceItems(vm.resourceId, vm.resourceSet)
-                .success(function (resourceItems) {
+                .then(function (resourceItems) {
                     //setTimeout(function() {
-                        vm.resourceItems = resourceItems;
+                        vm.resourceItems = getHttpData(resourceItems);
 
                         if (vm.resourceItems.length > 0) {
                             vm.activeResource = vm.resourceItems[0];
@@ -152,8 +149,7 @@
                             }
                         }
                     //},2000);
-                })
-                .error(parseError);
+                }, parseError);
         };
 
 
@@ -250,54 +246,52 @@
         vm.onResourceIdBlur = function() {
             if (!vm.activeResource.Value) {                
                 localizationService.fromCamelCase(vm.activeResource.ResourceId)
-                    .success(function(text) {
-                        vm.activeResource.Value = text;
-                    })
-                    .error(function() {
+                    .then(function(text) {
+                        vm.activeResource.Value = getHttpData(text);
+                    }, function(error) {
                         vm.activeResource.Value = vm.activeResource.ResourceId;
                     });                
             }
+        },
+        vm.onLocaleIdBlur = function(localeId) {
+            if (!localeId)
+                localeId = vm.activeResource.LocaleId;
 
-            },
-            vm.onLocaleIdBlur = function(localeId) {
-                if (!localeId)
-                    localeId = vm.activeResource.LocaleId;
+            localizationService.isRtl(localeId)
+                .then(function(isRtl) {
+                    vm.activeResource.IsRtl = getHttpData(isRtl);
+                });
+        },
+        vm.onAddResourceClick = function(resourceId, resourceSet, content) {
 
-                localizationService.isRtl(localeId)
-                    .success(function(isRtl) {
-                        vm.activeResource.IsRtl = isRtl;
-                    });
-            },
-            vm.onAddResourceClick = function(resourceId, resourceSet, content) {
-
-                if (!resourceId) {
-                    if (vm.activeResource)
-                        resourceId = vm.activeResource.ResourceId;
-                    else
-                        resourceId = "";
-                }
-                if (!resourceSet) {
-                    if (vm.activeResource)
-                        resourceSet = vm.activeResource.ResourceSet;
-                    else
-                        resourceSet = "";
-                }
-                var localeId = "";
+            if (!resourceId) {
                 if (vm.activeResource)
-                    localeId = vm.activeResource.LocaleId;
+                    resourceId = vm.activeResource.ResourceId;
+                else
+                    resourceId = "";
+            }
+            if (!resourceSet) {
+                if (vm.activeResource)
+                    resourceSet = vm.activeResource.ResourceSet;
+                else
+                    resourceSet = "";
+            }
+            var localeId = "";
+            if (vm.activeResource)
+                localeId = vm.activeResource.LocaleId;
 
-                var res = vm.newResource();
-                res.ResourceSet = resourceSet;
-                res.LocaleId = localeId;
-                res.ResourceId = resourceId;
-                res.Value = content;
-                vm.activeResource = res;
+            var res = vm.newResource();
+            res.ResourceSet = resourceSet;
+            res.LocaleId = localeId;
+            res.ResourceId = resourceId;
+            res.Value = content;
+            vm.activeResource = res;
                 
-                $("#AddResourceDialog")
-                    .modal()
-                    .on("shown.bs.modal",
-                        function() { $("#ResourceId").focus(); });
-            };
+            $("#AddResourceDialog")
+                .modal()
+                .on("shown.bs.modal",
+                    function() { $("#ResourceId").focus(); });
+        };
         vm.onEditResourceClick = function() {
             $("#AddResourceDialog").modal();            
         };
@@ -307,7 +301,7 @@
         }
         vm.onSaveResourceClick = function() {
             vm.updateResource(vm.activeResource)
-                .success(function() {
+                .then(function() {
                     var id = vm.activeResource.ResourceId;
                     var resourceSet = vm.activeResource.ResourceSet;
 
@@ -337,7 +331,7 @@
 
                     $("#AddResourceDialog").modal('hide');
                 })
-                .error(function () {                    
+                .catch(function () {                    
                     var err = ww.angular.parseHttpError(arguments);
                     alert(err.message);
                 });
@@ -347,10 +341,10 @@
                     vm.activeResource.ResourceId,
                     vm.activeResource.ResourceSet,
                     vm.activeResource.LocaleId)
-                .success(function() {
+                .then(function() {
                     $('#CommentDialog').modal('hide');
                 })
-                .error(parseError);
+                .catch(parseError);
         }
         vm.onResourceUpload = function(files) {
             if (files && files.length) {
@@ -399,7 +393,7 @@
                 return;
 
             localizationService.deleteResource(id, vm.activeResource.ResourceSet)
-                .success(function() {
+                .then(function() {
                     var i = _.findIndex(vm.resourceList, function(res) {
                         return res.ResourceId === id;
                     });
@@ -412,10 +406,10 @@
                         vm.resourceId = vm.resourceList[0].ResourceId;
                     vm.onResourceIdChange();
 
-                    showMessage(String.format(vm.dbRes('ResourceDeleted'), id));
+                    showMessage(vm.dbRes('ResourceDeleted') + " " + id);
                 })
-                .error(function() {
-                    showMessage(String.Format(vm.dbRes('ResourceNotDeleted'), id));
+                .catch(function () {
+                    showMessage(vm.dbRes('ResourceNotDeleted') + " " + id);
                 });
         };
         vm.onRenameResourceClick = function() {
@@ -427,7 +421,7 @@
         };
         vm.onRenameResourceDialogClick = function() {
             localizationService.renameResource(vm.activeResource.ResourceId, vm.newResourceId, vm.activeResource.ResourceSet)
-                .success(function() {
+                .then(function() {
                     for (var i = 0; i < vm.resourceList.length; i++) {
                         var res = vm.resourceList[i];
                         if (res.ResourceId == vm.activeResource.ResourceId) {
@@ -436,10 +430,10 @@
                         }
                     }
                     vm.activeResource.ResourceId = vm.newResourceId;
-                    showMessage(String.format(vm.dbRes('ResourceSetWasRenamedTo,vm.newResourceId')));
+                    showMessage(vm.dbRes('ResourceSetWasRenamedTo') + " " + vm.newResourceId);
                     $("#RenameResourceDialog").modal("hide");
                 })
-                .error(parseError);
+                .catch(parseError);
         }
 
         vm.onDeleteResourceSetClick = function() {
@@ -449,13 +443,13 @@
                 return;
 
             localizationService.deleteResourceSet(vm.resourceSet)
-                .success(function() {
+                .then(function() {
                     vm.getResourceSets();
-                    showMessage(vm.resoures.ResourceSetDeleted);
+                    showMessage(vm.dbRes('ResourceSetDeleted'));
                     vm.resourceSet = vm.resourceSets[0];
                     vm.onResourceSetChange();
                 })
-                .error(parseError);
+                .catch(parseError);
         }
 
         vm.onRenameResourceSetClick = function() {
@@ -465,9 +459,9 @@
 
 
             localizationService.renameResourceSet(vm.resourceSet, newResourceSet)
-                .success(function() {
+                .then(function() {
                     vm.getResourceSets()
-                        .success(function() {
+                        .then(function() {
                             vm.resourceSets.every(function(rs) {
                                 if (rs == newResourceSet) {
                                     vm.resourceSet = rs;
@@ -479,25 +473,25 @@
                         });
                     showMessage(vm.dbRes('ResourceSetRenamed'));
                 })
-                .error(parseError);
+                .catch(parseError);
         };
         vm.onGridMenuClick = function () {
             var resourceSet = vm.resourceSet;
             localizationService.getResourceGridItems(resourceSet)
-                .success(function (resources) {
-                    vm.resourceGridResources = resources;
+                .then(function (resources) {
+                    vm.resourceGridResources = getHttpData(resources);
                 });
         
             $("#ResourceGrid").show();
         };
         vm.saveGridResource = function (resource) {            
             localizationService.updateResource(resource)
-                .success(function() {
+                .then(function() {
                     showMessage(vm.dbRes('ResourceSaved') +
                         + " [" + resource.ResourceId +
                         " (" + (resource.LocaleId ? resource.LocaleId : "invariant") + ")]");
                 })
-                .error(parseError);
+                .catch(parseError);
         };
         vm.onGridClose = function() {
             // refresh resource display in case we change the value 
@@ -511,25 +505,25 @@
         };
         vm.onReloadResourcesClick = function() {
             localizationService.reloadResources()
-                .success(function() {
+                .then(function() {
                     showMessage(vm.dbRes('ResourcesHaveBeenReloaded'));
                 })
-                .error(parseError);
+                .catch(parseError);
         };
         vm.onBackupClick = function() {
             localizationService.backup()
-                .success(function() {
+                .then(function() {
                     showMessage(vm.dbRes('ResourcesHaveBeenBackedUp'));
                 })
-                .error(parseError);
+                .catch(parseError);
         };
         vm.onCreateTableClick = function() {
             localizationService.createTable()
-                .success(function() {
+                .then(function() {
                     vm.getResourceSets();
                     showMessage(vm.dbRes('LocalizationTableHasBeenCreated'));
                 })
-                .error(parseError);
+                .catch(parseError);
         };
         vm.showResourceIcons = function() {
             vm.resourceEditMode = !vm.resourceEditMode;
@@ -542,6 +536,9 @@
                 ww.resourceEditor.removeResourceIcons();
         };
 
+        function getHttpData(httpResponse) {
+            return httpResponse.data;
+        }
 
         vm.showMessage = showMessage;
         vm.parseError = parseError;
@@ -601,7 +598,7 @@
 
             function selectResourceIdWithQuery(query) {
                 vm.getResourceList()
-                    .success(function() {
+                    .then(function() {
                         var found = false;
                         for (var i = 0; i < vm.resourceList.length; i++) {
                             if (vm.resourceList[i].ResourceId === query.resourceId) {
@@ -641,7 +638,7 @@
 
         // initialize
         vm.getResourceSets()
-            .success(function() {
+            .then(function() {
                 var query = parseQueryString();
                 if (query.isEmpty) {
                     // just load resource sets

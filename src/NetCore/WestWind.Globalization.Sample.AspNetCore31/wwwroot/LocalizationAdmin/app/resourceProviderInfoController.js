@@ -15,6 +15,8 @@
         vm.dbRes = resources.dbRes;
         vm.info = null;
 
+        vm.parentView = $scope.$parent.view;
+
         vm.error = {
             message: null,
             icon: "info-circle",
@@ -23,9 +25,9 @@
         
         console.log("resourceProviderInfoController");
         localizationService.getLocalizationInfo()
-            .success(function(info) {
-            vm.info = info;
-        });
-
+            .then(function(info) {
+                vm.info = info.data;
+            })
+            .catch(vm.parentView.parseError);
     }
 })();

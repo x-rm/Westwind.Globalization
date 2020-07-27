@@ -14,14 +14,17 @@
         vm.resourceSets = localizationService.resourceSets;
         vm.selectedResourceSets = [];
         vm.classType = "DbRes";
+
+        vm.parentView = $scope.$parent.view;
         
         initialize();
 
         function initialize() {
             localizationService.getLocalizationInfo()
-                .success(function (pi) {
-                    vm.info = pi;
-                });
+                .then(function (pi) {
+                    vm.info = pi.data;
+                })
+                .catch(vm.parentView.parseError);
             setTimeout(function () {
                 vm.resourceSets = localizationService.resourceSets;
                 vm.selectedResourceSets = [""];
@@ -31,19 +34,13 @@
         vm.onCreateClassClick = function () {
             var file = vm.info.StronglyTypedGlobalResource;
             var ns = vm.info.ResourceBaseNamespace;
-            var parentView = $scope.$parent.view;
             
             localizationService.createClass(file,ns, vm.selectedResourceSets, vm.classType)
-                .success(function () {
+                .then(function () {
                     $("#CreateClassDialog").modal('hide');                   
-                    parentView.showMessage(vm.dbRes("StronglyTypedClassCreated"));
+                    vm.parentView.showMessage(vm.dbRes("StronglyTypedClassCreated"));
                 })
-                .error(parentView.parseError);
+                .catch(vm.parentView.parseError);
         };
-
-
-      
-
-
     }
 })();;

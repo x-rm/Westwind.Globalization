@@ -12,7 +12,9 @@
         vm.dbRes = resources.dbRes;
         vm.resourceSets = null;
         vm.selectedResourceSets = [];
-        
+
+        vm.parentView = $scope.$parent.view;
+
         vm.info = null;        
         vm.importExportType = "Export";        
         vm.onSubmitClick = function () {
@@ -24,35 +26,35 @@
         };
 
         vm.exportResources = function () {
-            var parentView = $scope.$parent.view;
             if (vm.selectedResourceSets && vm.selectedResourceSets.length == 1 && !vm.selectedResourceSets[0])
                 vm.selectedResourceSets = null;
+
             localizationService.exportResxResources(vm.info.ResxBaseFolder, vm.selectedResourceSets)
-                .success(function() {
+                .then(function() {
                     $("#ImportExportResxDialog").modal('hide');
-                    parentView.showMessage(vm.dbRes("ResxResourcesHaveBeenCreated"));
+                    vm.parentView.showMessage(vm.dbRes("ResxResourcesHaveBeenCreated"));
                 })
-                .error(parentView.parseError);
+                .catch(vm.parentView.parseError);
         };
 
         vm.importResources = function() {
-            var parentView = $scope.$parent.view;
             localizationService.importResxResources(vm.info.ResxBaseFolder)
-                .success(function() {
+                .then(function() {
                     $("#ImportExportResxDialog").modal('hide');                    
-                    parentView.showMessage(vm.dbRes("ResxResourcesHaveBeenImported"));
-                    parentView.getResourceSets();
+                    vm.parentView.showMessage(vm.dbRes("ResxResourcesHaveBeenImported"));
+                    vm.parentView.getResourceSets();
                 })
-                .error(parentView.parseError);
+                .catch(vm.parentView.parseError);
         };
 
         initialize();
 
         function initialize() {
             localizationService.getLocalizationInfo()
-                .success(function(pi) {
-                    vm.info = pi;
-                });
+                .then(function(pi) {
+                    vm.info = pi.data;
+                })
+                .catch(vm.parentView.parseError);
 
             setTimeout(function () {
                 vm.resourceSets = localizationService.resourceSets;

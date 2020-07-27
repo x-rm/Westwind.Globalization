@@ -82,15 +82,15 @@
             };
             
             $http.post(vm.baseUrl + "Translate", data)
-                .success(function (result) {
+                .then(function (result) {
                     if (type == "google")
-                        vm.googleTranslation = result;
+                        vm.googleTranslation = result.data;
                     else if(type == "bing")
-                        vm.bingTranslation = result;
+                        vm.bingTranslation = result.data;
                     else if (type == "deepl")
-                        vm.deeplTranslation = result;
+                        vm.deeplTranslation = result.data;
                 })
-                .error(function() {
+                .catch(function() {
                     var err = ww.angular.parseHttpError(arguments);
                     alert(err.message);
             });
