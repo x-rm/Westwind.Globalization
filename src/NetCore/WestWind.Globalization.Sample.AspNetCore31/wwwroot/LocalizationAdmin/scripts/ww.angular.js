@@ -24,9 +24,9 @@ http://en.wikipedia.org/wiki/MIT_License
                 return args;
             }
 
-            var data = args[0]; // http content
-            var status = args[1];
-            var msg = args[2];
+            var data = args.data; // http content
+            var status = args.status;
+            var msg = args.statusText;
 
             var errorMsg = "";
             if (data) {
